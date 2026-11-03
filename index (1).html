@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f6fed">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>CRM УМС — Дашборд</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --card:#fff; --line:#e3e8f0; --accent:#2f6fed;
+    --text:#1e2430; --muted:#6b7688; --danger:#c0392b;
+    --success:#1a9c6b; --warning:#f39c12;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; padding:20px; background:var(--bg); color:var(--text);
+    font:15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color:transparent;
+    padding-bottom: 80px; /* Место для нижней навигации */
+  }
+  .wrap{max-width:1080px; margin:0 auto}
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0f1420; --card:#1a2130; --line:#2a3444;
+      --text:#e6ebf2; --muted:#9aa5b6; --danger:#f07070;
+      --success:#4ade80; --warning:#fbbf24;
+    }
+  }
+
+  /* Шапка */
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .user-info { display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; }
+  .greeting h1 { font-size: 20px; margin: 0 0 2px; }
+  .greeting p { margin: 0; font-size: 13px; color: var(--muted); }
+  .logout-btn { background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 8px; }
+  .logout-btn:hover { color: var(--danger); }
+
+  /* Быстрые действия */
+  .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .action-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 16px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); cursor: pointer; transition: 0.15s; text-align: center; text-decoration: none; color: var(--text); }
+  .action-btn:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(47,111,237,0.1); }
+  .action-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .action-btn.primary:hover { box-shadow: 0 4px 12px rgba(47,111,237,0.3); }
+  .action-btn svg { width: 24px; height: 24px; }
+  .action-btn span { font-weight: 600; font-size: 14px; }
+  .action-btn small { font-size: 12px; opacity: 0.8; }
+
+  /* Сводка (статистика) */
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; text-align: center; }
+  .stat-value { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .stat-label { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-card.searching .stat-value { color: var(--warning); }
+  .stat-card.active .stat-value { color: var(--success); }
+  .stat-card.pending .stat-value { color: var(--accent); }
+
+  /* Заголовки разделов */
+  .section-title { font-size: 16px; font-weight: 700; margin: 0 0 12px; display: flex; align-items: center; justify-content: space-between; }
+  .section-title a { font-size: 13px; color: var(--accent); text-decoration: none; font-weight: 600; }
+  .section-title a:hover { text-decoration: underline; }
+
+  /* Список заказов */
+  .order-list { display: grid; gap: 12px; }
+  .order-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; text-decoration: none; color: inherit; transition: 0.15s; }
+  .order-card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(47,111,237,0.08); }
+  .order-header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .order-id { font-weight: 700; font-size: 15px; }
+  .order-date { font-size: 12px; color: var(--muted); }
+  .order-status { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .order-status.searching { background: rgba(243, 156, 18, 0.15); color: #d35400; }
+  .order-status.pending { background: rgba(47,111,237,0.15); color: var(--accent); }
+  .order-status.active { background: rgba(26, 156, 107, 0.15); color: var(--success); }
+  .order-details { display: flex; flex-wrap: wrap; gap: 8px; }
+  .order-tag { font-size: 12px; background: var(--bg); padding: 4px 8px; border-radius: 6px; color: var(--muted); }
+  .order-tag.highlight { background: rgba(47,111,237,0.1); color: var(--accent); font-weight: 600; }
+
+  /* Нижняя навигация (для мобильных и Telegram) */
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--line); display: flex; justify-content: space-around; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--muted); font-size: 11px; font-weight: 600; transition: 0.15s; }
+  .nav-item.active { color: var(--accent); }
+  .nav-item svg { width: 22px; height: 22px; }
+  
+  @media (min-width: 768px) {
+    .quick-actions { grid-template-columns: repeat(3, 1fr); }
+    .bottom-nav { position: static; background: transparent; border: none; box-shadow: none; padding: 0; margin-top: 24px; justify-content: flex-start; gap: 24px; }
+    .nav-item { flex-direction: row; font-size: 14px; gap: 8px; }
+    .nav-item svg { width: 18px; height: 18px; }
+    body { padding-bottom: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <!-- Шапка с приветствием -->
+  <header class="header">
+    <div class="user-info">
+      <div class="avatar">А</div>
+      <div class="greeting">
+        <h1>Привет, Анна!</h1>
+        <p>Сегодня, 24 мая</p>
+      </div>
+    </div>
+    <button class="logout-btn" title="Выйти" onclick="alert('Выход из аккаунта');">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </header>
+
+  <!-- Быстрые действия -->
+  <div class="quick-actions">
+    <a href="#" class="action-btn primary" onclick="event.preventDefault(); alert('Переход на страницу создания заказа');">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span>Создать заказ</span>
+    </a>
+    <a href="#" class="action-btn" onclick="event.preventDefault(); alert('Переход к списку клиентов');">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Клиенты</span>
+    </a>
+    <a href="#" class="action-btn" onclick="event.preventDefault(); alert('Переход к списку зоосмотрителей');">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <span>Сотрудники</span>
+    </a>
+  </div>
+
+  <!-- Статистика -->
+  <div class="stats-grid">
+    <div class="stat-card searching">
+      <div class="stat-value">3</div>
+      <div class="stat-label">Ищут исполнителя</div>
+    </div>
+    <div class="stat-card pending">
+      <div class="stat-value">2</div>
+      <div class="stat-label">На согласовании</div>
+    </div>
+    <div class="stat-card active">
+      <div class="stat-value">12</div>
+      <div class="stat-label">В работе</div>
+    </div>
+  </div>
+
+  <!-- Последние заказы -->
+  <div class="section-title">
+    <span>Последние заказы</span>
+    <a href="#" onclick="event.preventDefault(); alert('Переход ко всем заказам');">Все заказы →</a>
+  </div>
+
+  <div class="order-list">
+    <!-- Заказ 1 -->
+    <a href="#" class="order-card" onclick="event.preventDefault(); alert('Переход в карточку заказа #1042');">
+      <div class="order-header">
+        <div>
+          <div class="order-id">Заказ #1042</div>
+          <div class="order-date">Создан сегодня в 10:30</div>
+        </div>
+        <span class="order-status searching">Ищем</span>
+      </div>
+      <div class="order-details">
+        <span class="order-tag highlight">Догситтинг</span>
+        <span class="order-tag highlight">Выгул</span>
+        <span class="order-tag">Бублик (Собака)</span>
+        <span class="order-tag">15 окт — 17 окт</span>
+      </div>
+    </a>
+
+    <!-- Заказ 2 -->
+    <a href="#" class="order-card" onclick="event.preventDefault(); alert('Переход в карточку заказа #1041');">
+      <div class="order-header">
+        <div>
+          <div class="order-id">Заказ #1041</div>
+          <div class="order-date">Создан вчера в 15:45</div>
+        </div>
+        <span class="order-status pending">Согласование</span>
+      </div>
+      <div class="order-details">
+        <span class="order-tag highlight">Зооняня</span>
+        <span class="order-tag">Мурка (Кошка)</span>
+        <span class="order-tag">20 окт — 22 окт</span>
+      </div>
+    </a>
+
+    <!-- Заказ 3 -->
+    <a href="#" class="order-card" onclick="event.preventDefault(); alert('Переход в карточку заказа #1038');">
+      <div class="order-header">
+        <div>
+          <div class="order-id">Заказ #1038</div>
+          <div class="order-date">Создан 20 мая в 09:15</div>
+        </div>
+        <span class="order-status active">В работе</span>
+      </div>
+      <div class="order-details">
+        <span class="order-tag highlight">Выгул</span>
+        <span class="order-tag">Рекс (Собака)</span>
+        <span class="order-tag">21 окт — 25 окт</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- Нижняя навигация (условная) -->
+  <nav class="bottom-nav">
+    <a href="#" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Главная
+    </a>
+    <a href="#" class="nav-item" onclick="event.preventDefault(); alert('Переход к списку заказов');">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Заказы
+    </a>
+    <a href="#" class="nav-item" onclick="event.preventDefault(); alert('Переход к чатам');">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Чаты
+    </a>
+    <a href="#" class="nav-item" onclick="event.preventDefault(); alert('Переход в профиль');">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Профиль
+    </a>
+  </nav>
+</div>
+
+<script>
+  // Инициализация Telegram Web App (если открыто в TG)
+  if (window.Telegram && window.Telegram.WebApp) {
+    window.Telegram.WebApp.ready();
+    window.Telegram.WebApp.expand(); // Разворачиваем на весь экран
+  }
+</script>
+</body>
+</html>
